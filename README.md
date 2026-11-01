@@ -1,85 +1,119 @@
+<div align="center">
+
 # Astra Sender
 
-![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-blue) ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white) ![Versão](https://img.shields.io/badge/Versão-0.2.4-1477eb)
+**Suas mensagens. No horário certo.**
 
-Automação de mensagens para Windows com uma interface compacta e direta. Configure perfis para diferentes aplicativos, selecione o campo de texto e o botão de envio na tela e faça envios imediatos ou agendados.
+Automação de mensagens para Windows, com perfis independentes,<br>
+agendamentos e uma interface que mantém tudo ao alcance.
 
-> **Estado:** versão beta, com correções de persistência e do `QDateTime`. A interface e o envio em aplicativos reais dependem de validação no Windows. Um clique registrado não garante a entrega da mensagem.
+![Windows](https://img.shields.io/badge/Windows-10%20%2F%2011-1477EB?style=flat-square)
+![Versão](https://img.shields.io/badge/versão-0.2.4%20beta-24374D?style=flat-square)
+![Python](https://img.shields.io/badge/Python-3.11%2B-24374D?style=flat-square)
 
-## Interface
+**[Baixar para Windows](https://github.com/2ksllvwr/Astra-Sender/releases)** · **[Primeiros passos](#primeiros-passos)** · **[Desenvolvimento](docs/desenvolvimento.md)**
 
-As imagens abaixo são **ilustrações da interface da versão 0.2.4** com dados fictícios, não capturas de uma execução real. A interface foi construída com quatro abas no topo, sem menu lateral e sem subtítulo.
+<br>
 
-**Enviar** — escolha o perfil, escreva a mensagem, salve ou envie. Use o botão ⌖ para marcar os pontos da tela.
+<img src="docs/imagens/enviar.svg" alt="Aba Enviar do Astra Sender: perfil, mensagem e controles de envio" width="900">
 
-![Astra Sender - Enviar](docs/imagens/enviar.svg)
+<sub>Ilustração da interface 0.2.4. Os dados apresentados são exemplos.</sub>
 
-**Agendamentos** — crie, edite, pause, retome ou exclua tarefas. O formulário abre em uma pequena janela.
+</div>
 
-![Astra Sender - Agendamentos](docs/imagens/agendamentos.svg)
+<br>
 
-**Histórico** — veja os registros de execução e falhas.
+## Uma rotina, vários destinos
 
-![Astra Sender - Histórico](docs/imagens/historico.svg)
+Crie um perfil para cada aplicativo, marque onde escrever e onde enviar. Depois, use a mesma configuração para uma mensagem imediata ou uma tarefa agendada.
 
-**Perfis** — cadastre aplicativos e selecione seus pontos de digitação e envio.
+| Organize | Programe | Acompanhe |
+| :--- | :--- | :--- |
+| Perfis com aplicativo, mensagem e pontos de interação próprios. | Execuções únicas, diárias ou semanais, com opção de pausar e retomar. | Histórico das ações executadas e dos erros encontrados. |
 
-![Astra Sender - Perfis](docs/imagens/perfis.svg)
+## Baixar e usar
 
-## Funcionalidades
+Abra **[Releases](https://github.com/2ksllvwr/Astra-Sender/releases)** e escolha a compilação mais recente que tenha arquivos disponíveis.
 
-- Perfis independentes para mensageiros desktop e páginas no navegador, com configurações armazenadas em SQLite.
-- Seletor visual para marcar as coordenadas do campo de mensagem e do botão de enviar.
-- Modos **Escrever e enviar** ou **Somente enviar**.
-- Agendamentos únicos, diários e semanais, com edição, pausa e exclusão.
-- Histórico de tentativas, erros e ações executadas; **não confirma entrega**.
-- Minimização para a bandeja do Windows, quando disponível. O programa precisa continuar em execução para processar os horários.
-- Automação por acessibilidade do Windows (UI Automation) quando compatível e alternativa por mouse, mediante autorização do perfil.
+| Arquivo | Como usar |
+| :--- | :--- |
+| **`AstraSender.exe`** | Baixe e execute. Não precisa instalar Python. |
+| `AstraSender-versao-em-pasta.zip` | Extraia todo o conteúdo e abra `AstraSender.exe`, mantendo os arquivos juntos. |
+| `SHA256SUMS.txt` | Consulte os hashes para conferir a integridade do download. |
 
-## Como usar
+As compilações da branch principal são identificadas como **pré-versões**. Como o repositório é privado, entre na conta com acesso para visualizar os downloads.
 
-1. Na aba **Perfis**, escolha **+ Novo** e cadastre o aplicativo. Um perfil pode ser salvo antes de configurar os pontos.
-2. Com o aplicativo de mensagens aberto, selecione o perfil e use **Marcar campo** e **Marcar envio**. Também é possível usar o botão ⌖ na aba **Enviar**.
-3. Em **Enviar**, escreva a mensagem e clique em **Salvar Mensagem**, **Enviar Agora** ou **Agendar...**.
-4. Em **Agendamentos**, acompanhe tarefas, crie novas e gerencie as existentes.
-5. Em **Histórico**, examine os resultados de cada tentativa.
+## Primeiros passos
 
-### Limitações
+1. **Crie um perfil.** Em **Perfis → + Novo**, dê um nome ao destino e indique o aplicativo.
+2. **Marque os pontos.** Com a janela de destino aberta, use **Marcar campo** e **Marcar envio**.
+3. **Prepare a mensagem.** Na aba **Enviar**, selecione o perfil e escreva o texto. Use **Salvar Mensagem** para reutilizá-lo.
+4. **Escolha quando enviar.** Clique em **Enviar Agora** ou em **Agendar…**, definindo a data, o horário e a repetição.
+5. **Confira a execução.** Consulte **Histórico** para verificar as ações registradas ou identificar falhas.
 
-O envio por coordenadas exige que a janela e os botões estejam nas posições configuradas e pode assumir o controle do mouse/teclado momentaneamente. O modo UI Automation depende dos controles de acessibilidade expostos pelo aplicativo e pode falhar. O programa não garante automação em janelas minimizadas, com a tela bloqueada ou quando o computador estiver desligado. Use apenas para mensagens autorizadas e conforme as regras das plataformas.
+> Deixe o Astra Sender em execução para processar os agendamentos. Quando a bandeja do Windows estiver disponível, o aplicativo pode permanecer minimizado nela.
 
-## Baixar, compilar e publicar
+## Quatro abas, uma interface direta
 
-Quando houver uma compilação publicada, consulte [Releases](https://github.com/2ksllvwr/Astra-Sender/releases) ou [Actions → Artifacts](https://github.com/2ksllvwr/Astra-Sender/actions). O repositório precisa estar criado e configurado antes que esses links forneçam arquivos.
+### Enviar
 
-Para compilar localmente, extraia o projeto no Windows e execute **`COMPILAR_WINDOWS.bat`**. Alternativamente:
+O perfil, a mensagem e os controles principais ficam na mesma tela. Escolha entre **Escrever e enviar** ou **Somente enviar**, quando o texto já estiver preparado no aplicativo de destino.
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\build_windows.ps1
-```
+### Agendamentos
 
-O executável local estará em `dist\AstraSender\AstraSender.exe` após uma compilação bem-sucedida. O workflow `.github/workflows/windows-build.yml` testa o código e compila automaticamente ao enviar alterações para a branch principal; cada compilação aprovada da branch principal publica uma pré-versão em Releases com o executável, ZIP portátil e SHA256. Tags `v*` também publicam versões identificadas. Não é necessário compilar no seu computador.
+Veja as tarefas em uma lista e abra o formulário para ajustar horários e recorrência. Pause, retome ou exclua uma tarefa conforme sua rotina.
 
-Scripts opcionais: `INICIAR_GITHUB.bat` para configuração inicial com sua autorização, `PUBLICAR_ATUALIZACAO.bat` para enviar modificações e `PUBLICAR_VERSAO.bat` para criar uma versão.
+<img src="docs/imagens/agendamentos.svg" alt="Ilustração da aba Agendamentos" width="900">
 
-## Dados e migração
+<details>
+<summary><strong>Conheça as abas Perfis e Histórico</strong></summary>
 
-Perfis e agendamentos ficam no arquivo `%LOCALAPPDATA%\AstraSender\astra_sender.db`, fora do diretório da aplicação. Na primeira execução, se o banco novo ainda não existir, o sistema tenta copiar o banco antigo de `%LOCALAPPDATA%\PySender\pysender.db`, sem apagar o original. Recomenda-se fazer backup antes da atualização.
+### Perfis
 
-## Estrutura
+Mantenha configurações separadas para cada destino, incluindo pontos de interação e método de automação.
+
+<img src="docs/imagens/perfis.svg" alt="Ilustração da aba Perfis" width="900">
+
+### Histórico
+
+Consulte a data, o perfil utilizado e o resultado de cada tentativa. Uma ação executada registra a interação feita pelo programa; não confirma o recebimento da mensagem.
+
+<img src="docs/imagens/historico.svg" alt="Ilustração da aba Histórico" width="900">
+
+</details>
+
+<sub>As imagens desta página são ilustrações do programa, não capturas de testes em aplicativos externos.</sub>
+
+## Atualizações sem compilação manual
+
+Cada atualização enviada à `main` aciona o **GitHub Actions**. O processo executa os testes no Windows, gera as duas distribuições e publica os arquivos em Releases somente após uma compilação bem-sucedida.
+
+**[Acompanhar compilações](https://github.com/2ksllvwr/Astra-Sender/actions)** · **[Ver versões disponíveis](https://github.com/2ksllvwr/Astra-Sender/releases)**
+
+Para atualizar, feche o programa e substitua o executável ou a pasta da aplicação pela nova versão. O download e a instalação ainda são manuais; a geração dos arquivos é automática.
+
+## Seus dados continuam com você
+
+Perfis, mensagens salvas, tarefas e histórico são armazenados localmente em SQLite, fora da pasta do executável:
 
 ```text
-Astra-Sender/
-├── app/
-│   ├── automation/         # UI Automation e coordenadas
-│   ├── database/           # Persistência e migração SQLite
-│   └── ui/                 # Interface com quatro abas e seletor
-├── docs/imagens/           # Ilustrações das quatro abas
-├── tests/                  # Testes automatizados
-├── .github/workflows/      # Build automático para Windows
-├── main.py
-├── COMPILAR_WINDOWS.bat
-└── requirements.txt
+%LOCALAPPDATA%\AstraSender\astra_sender.db
 ```
 
-Este projeto não é afiliado ao WhatsApp, Discord, Telegram ou aos desenvolvedores dessas plataformas.
+Na primeira execução, o Astra Sender tenta importar o banco antigo do PySender, quando disponível, sem apagar o original. Faça uma cópia do banco com o aplicativo fechado antes de atualizar.
+
+## Antes de agendar
+
+- A automação funciona no Windows e depende dos controles disponíveis no aplicativo de destino.
+- No modo por coordenadas, mantenha a janela na posição marcada. O programa poderá utilizar o mouse e o teclado durante a execução.
+- A tela bloqueada, o computador desligado ou uma janela minimizada podem impedir a tarefa.
+- A versão está em **beta**. Valide o envio com um destino de teste antes de usá-la na sua rotina.
+
+---
+
+<div align="center">
+
+**Astra Sender**<br>
+<sub>Projeto independente. Sem afiliação com WhatsApp, Discord, Telegram ou seus desenvolvedores.</sub>
+
+</div>

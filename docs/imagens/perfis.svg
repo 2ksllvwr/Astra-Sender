@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 400" width="760" height="400">
+<rect x="0" y="0" width="760" height="400" rx="9" fill="#0a1422"/>
+<text x="16" y="27" font-family="Segoe UI,Arial,sans-serif" font-size="15" fill="#e7edf6" font-weight="600">Astra Sender</text>
+<rect x="8" y="39" width="744" height="332" rx="5" fill="#111b2a" stroke="#354e69"/>
+<text x="37" y="70" font-family="Segoe UI,Arial,sans-serif" font-size="13" fill="#e7edf6" font-weight="400">Enviar</text>
+<text x="159" y="70" font-family="Segoe UI,Arial,sans-serif" font-size="13" fill="#e7edf6" font-weight="400">Agendamentos</text>
+<text x="281" y="70" font-family="Segoe UI,Arial,sans-serif" font-size="13" fill="#e7edf6" font-weight="400">Histórico</text>
+<rect x="388" y="48" width="112" height="34" rx="5" fill="#1477eb"/>
+<text x="403" y="70" font-family="Segoe UI,Arial,sans-serif" font-size="13" fill="#e7edf6" font-weight="400">Perfis</text>
+<rect x="0" y="378" width="760" height="22" rx="0" fill="#0a1422"/>
+<text x="20" y="393" font-family="Segoe UI,Arial,sans-serif" font-size="11" fill="#6cdda5" font-weight="400">●  Pronto</text>
+<text x="637" y="393" font-family="Segoe UI,Arial,sans-serif" font-size="10" fill="#9cacc0" font-weight="400">Astra Sender 0.2.4</text>
+<rect x="23" y="93" width="714" height="224" rx="4" fill="#152338" stroke="#354e69"/>
+<rect x="23" y="93" width="714" height="38" rx="4" fill="#22374e"/>
+<text x="35" y="117" font-family="Segoe UI,Arial,sans-serif" font-size="13" fill="#e7edf6" font-weight="400">Perfil</text>
+<text x="188" y="117" font-family="Segoe UI,Arial,sans-serif" font-size="13" fill="#e7edf6" font-weight="400">Janela</text>
+<text x="360" y="117" font-family="Segoe UI,Arial,sans-serif" font-size="13" fill="#e7edf6" font-weight="400">Método</text>
+<text x="500" y="117" font-family="Segoe UI,Arial,sans-serif" font-size="13" fill="#e7edf6" font-weight="400">Campo</text>
+<text x="623" y="117" font-family="Segoe UI,Arial,sans-serif" font-size="13" fill="#e7edf6" font-weight="400">Botão de envio</text>
+<text x="35" y="164" font-family="Segoe UI,Arial,sans-serif" font-size="13" fill="#e7edf6" font-weight="400">WhatsApp</text>
+<text x="188" y="164" font-family="Segoe UI,Arial,sans-serif" font-size="13" fill="#e7edf6" font-weight="400">WhatsApp</text>
+<text x="360" y="164" font-family="Segoe UI,Arial,sans-serif" font-size="12" fill="#e7edf6" font-weight="400">Automático</text>
+<text x="500" y="164" font-family="Segoe UI,Arial,sans-serif" font-size="12" fill="#e7edf6" font-weight="400">890, 730</text>
+<text x="623" y="164" font-family="Segoe UI,Arial,sans-serif" font-size="12" fill="#e7edf6" font-weight="400">1170, 730</text>
+<text x="35" y="208" font-family="Segoe UI,Arial,sans-serif" font-size="13" fill="#e7edf6" font-weight="400">Discord</text>
+<text x="188" y="208" font-family="Segoe UI,Arial,sans-serif" font-size="13" fill="#e7edf6" font-weight="400">Discord</text>
+<text x="360" y="208" font-family="Segoe UI,Arial,sans-serif" font-size="12" fill="#e7edf6" font-weight="400">Coordenadas</text>
+<text x="500" y="208" font-family="Segoe UI,Arial,sans-serif" font-size="12" fill="#9cacc0" font-weight="400">Não marcado</text>
+<text x="623" y="208" font-family="Segoe UI,Arial,sans-serif" font-size="12" fill="#9cacc0" font-weight="400">Não marcado</text>
+<rect x="23" y="330" width="90" height="31" rx="4" fill="#1477eb"/>
+<text x="43" y="351" font-family="Segoe UI,Arial,sans-serif" font-size="12" fill="#e7edf6" font-weight="400">+ Novo</text>
+<rect x="120" y="330" width="77" height="31" rx="4" fill="#22374e" stroke="#354e69"/>
+<text x="139" y="351" font-family="Segoe UI,Arial,sans-serif" font-size="12" fill="#e7edf6" font-weight="400">Editar</text>
+<rect x="204" y="330" width="77" height="31" rx="4" fill="#22374e" stroke="#354e69"/>
+<text x="220" y="351" font-family="Segoe UI,Arial,sans-serif" font-size="12" fill="#e7edf6" font-weight="400">Excluir</text>
+<rect x="465" y="330" width="132" height="31" rx="4" fill="#22374e" stroke="#354e69"/>
+<text x="477" y="351" font-family="Segoe UI,Arial,sans-serif" font-size="12" fill="#e7edf6" font-weight="400">Marcar campo</text>
+<rect x="603" y="330" width="133" height="31" rx="4" fill="#22374e" stroke="#354e69"/>
+<text x="615" y="351" font-family="Segoe UI,Arial,sans-serif" font-size="12" fill="#e7edf6" font-weight="400">Marcar envio</text>
+</svg>

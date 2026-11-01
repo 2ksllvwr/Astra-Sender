@@ -1,0 +1,118 @@
+name: Astra Sender | Windows EXE
+
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  workflow_dispatch:
+
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Testar e compilar no Windows
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Obter código
+        uses: actions/checkout@v6
+
+      - name: Configurar Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Instalar dependências
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Executar testes e validar sintaxe
+        shell: pwsh
+        run: |
+          python -m compileall -q main.py app tests
+          if ($LASTEXITCODE -ne 0) { throw 'Erro de sintaxe no projeto.' }
+          python -m unittest discover -s tests -v
+          if ($LASTEXITCODE -ne 0) { throw 'Testes falharam. Build cancelado.' }
+
+      - name: Compilar executável único
+        shell: pwsh
+        run: |
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name AstraSender --collect-all pywinauto --hidden-import win32timezone --distpath dist-unico main.py
+          if ($LASTEXITCODE -ne 0) { throw 'Falha no EXE único.' }
+          if (-not (Test-Path dist-unico/AstraSender.exe)) { throw 'EXE não encontrado.' }
+
+      - name: Compilar versão em pasta
+        shell: pwsh
+        run: |
+          python -m PyInstaller --noconfirm --clean --windowed --name AstraSender --collect-all pywinauto --hidden-import win32timezone --distpath dist-pasta main.py
+          if ($LASTEXITCODE -ne 0) { throw 'Falha na versão em pasta.' }
+          if (-not (Test-Path dist-pasta/AstraSender/AstraSender.exe)) { throw 'EXE em pasta não encontrado.' }
+
+      - name: Preparar arquivos e SHA256
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path publicados -Force | Out-Null
+          Copy-Item dist-unico/AstraSender.exe publicados/AstraSender.exe
+          Compress-Archive -Path 'dist-pasta/AstraSender/*' -DestinationPath publicados/AstraSender-versao-em-pasta.zip -Force
+          $files = @('AstraSender.exe','AstraSender-versao-em-pasta.zip')
+          $checksums = foreach ($name in $files) {
+            $hash = (Get-FileHash -Algorithm SHA256 "publicados/$name").Hash.ToLower()
+            "$hash  $name"
+          }
+          $checksums -join "`n" | Out-File -FilePath publicados/SHA256SUMS.txt -Encoding utf8
+
+      - name: Anexar build para download
+        uses: actions/upload-artifact@v4
+        with:
+          name: AstraSender-Windows-${{ github.run_number }}
+          path: publicados/
+          retention-days: 30
+          if-no-files-found: error
+
+  release:
+    name: Publicar Release
+    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Baixar arquivos compilados
+        uses: actions/download-artifact@v4
+        with:
+          name: AstraSender-Windows-${{ github.run_number }}
+          path: publicados/
+
+      - name: Definir versão da compilação
+        id: version
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [ "$REF_TYPE" = "tag" ]; then
+            echo "tag=$REF_NAME" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=build-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Criar/atualizar Release no GitHub
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: Astra Sender — ${{ steps.version.outputs.tag }}
+          files: |
+            publicados/AstraSender.exe
+            publicados/AstraSender-versao-em-pasta.zip
+            publicados/SHA256SUMS.txt
+          generate_release_notes: true
+          prerelease: ${{ github.ref_type != 'tag' || contains(github.ref_name, '-beta') || contains(github.ref_name, '-rc') }}
+          fail_on_unmatched_files: true

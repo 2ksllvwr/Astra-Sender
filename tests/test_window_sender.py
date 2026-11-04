@@ -108,15 +108,14 @@ class AutomaticComposerTests(unittest.TestCase):
     def test_document_composer_is_discovered_and_runtime_duplicates_removed(self):
         from app.automation.window_sender import discover_editors
         search = self.editor('Pesquisar', (2,))
+        search.element_info.control_type = 'Edit'
         composer = self.editor('Conversar em #geral')
         duplicate = self.editor('Conversar em #geral')
         page = self.editor('Discord', (3,))
         hidden = self.editor('Message #hidden', (4,))
         hidden.is_visible.return_value = False
         root = Mock()
-        root.descendants.side_effect = lambda control_type: {
-            'Edit': [search], 'Document': [page, composer],
-            'Group': [duplicate, hidden], 'Custom': []}[control_type]
+        root.descendants.return_value = [search, page, composer, duplicate, hidden]
         found = discover_editors(root, True)
         self.assertEqual(found, [search, composer])
         self.assertIs(choose_editor(found, discord=True), composer)
@@ -143,7 +142,7 @@ class AccessibleLabelTests(unittest.TestCase):
         e.window_text.return_value = '\n'
         e.is_visible.return_value = e.is_enabled.return_value = e.is_keyboard_focusable.return_value = True
         root = Mock()
-        root.descendants.side_effect = lambda control_type: [e] if control_type == 'Document' else []
+        root.descendants.return_value = [e]
         self.assertEqual(editor_name(e), 'Conversar em #𝕲𝖊𝖗𝖆𝖑')
         self.assertIs(choose_editor(discover_editors(root, True), discord=True), e)
         e.window_text.assert_not_called()

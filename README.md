@@ -8,7 +8,7 @@ Automação de mensagens para Windows, com perfis independentes,<br>
 agendamentos e uma interface que mantém tudo ao alcance.
 
 ![Windows](https://img.shields.io/badge/Windows-10%20%2F%2011-1477EB?style=flat-square)
-![Versão](https://img.shields.io/badge/versão-0.2.7%20beta-24374D?style=flat-square)
+![Versão](https://img.shields.io/badge/versão-0.2.8%20beta-24374D?style=flat-square)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-24374D?style=flat-square)
 
 **[Baixar para Windows](https://github.com/2ksllvwr/Astra-Sender/releases)** · **[Primeiros passos](#primeiros-passos)** · **[Desenvolvimento](docs/desenvolvimento.md)**
@@ -127,3 +127,19 @@ Na primeira execução, o Astra Sender tenta importar o banco antigo do PySender
 <sub>Projeto independente. Sem afiliação com WhatsApp, Discord, Telegram ou seus desenvolvedores.</sub>
 
 </div>
+
+
+### Horário do disparo (0.2.8)
+
+Os agendamentos mostram segundos e os novos horários começam em `:00`.
+No método **Janela + colar + Enter**, a preparação começa até 12 segundos antes:
+restaurar a janela, localizar o campo e colar o texto. Deixe mouse, teclado e chat
+livres nesse período. O Enter aguarda o horário local; não há garantia de entrega
+no mesmo segundo no servidor. O histórico registra o instante de solicitação
+do Enter e o atraso local em milissegundos. Atrasos acima de um segundo cancelam
+o disparo, podendo deixar o texto preparado como rascunho.
+Envios simultâneos continuam sequenciais, pois usam o mesmo teclado.
+Os métodos antigos por mouse/UIA não fazem preparação antecipada.
+Se a detecção falhar, abra **Perfis → Diagnóstico** e copie o relatório de
+controles para análise. Ele não consulta o conteúdo das mensagens, mas os
+rótulos podem conter nomes de canais.

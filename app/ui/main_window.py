@@ -18,7 +18,7 @@ from app.automation.engine import send
 from app.database import db
 from app.ui.selector import Selector
 
-VERSION = '0.2.7'
+VERSION = '0.2.8'
 STYLE = """
 QWidget { background-color: #111b2a; color: #e7edf6; font: 10pt 'Segoe UI'; }
 QMainWindow { background-color: #0a1422; }
@@ -86,7 +86,7 @@ def table_widget(headers):
 
 def formatted_time(s):
     try:
-        return datetime.fromisoformat(s).strftime('%d/%m/%Y %H:%M')
+        return datetime.fromisoformat(s).strftime('%d/%m/%Y %H:%M:%S')
     except (ValueError, TypeError):
         return str(s or '')
 
@@ -139,6 +139,7 @@ class ProfileDialog(QDialog):
         editor_row = QHBoxLayout()
         editor_row.addWidget(self.editor, 1)
         editor_row.addWidget(button('Detectar campos', self.detect_fields))
+        editor_row.addWidget(button('Diagnóstico', self.diagnose_fields))
         form.addRow('Campo de texto', editor_row)
         self.refresh_windows()
 
@@ -218,6 +219,29 @@ class ProfileDialog(QDialog):
         except Exception as exc:
             QMessageBox.warning(self, 'Detectar campos', str(exc))
 
+    def diagnose_fields(self):
+        w = self.windows.currentData()
+        if not w:
+            return QMessageBox.information(self, 'Diagnóstico', 'Selecione uma janela primeiro.')
+        try:
+            from pywinauto import Desktop
+            from app.automation.window_sender import field_diagnostics
+            root = Desktop(backend='uia').window(handle=w['hwnd']).wrapper_object()
+            report = field_diagnostics(root)
+            dialog = QDialog(self)
+            dialog.setWindowTitle('Diagnóstico dos campos — copie o texto para análise')
+            dialog.resize(780, 430)
+            layout = QVBoxLayout(dialog)
+            text = QTextEdit()
+            text.setReadOnly(True)
+            text.setPlainText(report)
+            layout.addWidget(text)
+            layout.addWidget(button('Copiar diagnóstico', lambda: QApplication.clipboard().setText(report)))
+            layout.addWidget(button('Fechar', dialog.accept))
+            dialog.exec()
+        except Exception as exc:
+            QMessageBox.warning(self, 'Diagnóstico', str(exc))
+
     def update_permission(self):
         uia_only = self.provider.currentData() == 'uia'
         self.allow.setEnabled(not uia_only)
@@ -275,9 +299,9 @@ class ScheduleDialog(QDialog):
         self.message.setFixedHeight(100)
         self.message.setPlainText((task['message'] if task else draft) or '')
         self.when = QDateTimeEdit()
-        self.when.setDisplayFormat('dd/MM/yyyy HH:mm')
+        self.when.setDisplayFormat('dd/MM/yyyy HH:mm:ss')
         self.when.setCalendarPopup(True)
-        d = datetime.fromisoformat(task['scheduled_at']) if task else datetime.now() + timedelta(minutes=5)
+        d = datetime.fromisoformat(task['scheduled_at']) if task else (datetime.now() + timedelta(minutes=5)).replace(second=0, microsecond=0)
         self.when.setDateTime(qt_datetime(d))
         self.recurrence = QComboBox()
         self.recurrence.addItem('Uma vez', 'once')
@@ -289,6 +313,9 @@ class ScheduleDialog(QDialog):
         form.addRow('Modo', self.mode)
         form.addRow('Mensagem', self.message)
         form.addRow('Data e horário', self.when)
+        note = QLabel('Janela + Enter prepara o texto até 12 s antes. Mantenha o chat livre até o disparo. Segundos :00 = virada do minuto.')
+        note.setWordWrap(True)
+        form.addRow(note)
         form.addRow('Repetição', self.recurrence)
         body.addLayout(form)
         foot = QHBoxLayout()
@@ -365,7 +392,8 @@ class MainWindow(QMainWindow):
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.tick)
-        self.timer.start(1800)
+        self.timer.setTimerType(Qt.TimerType.PreciseTimer)
+        self.timer.start(100)
         self.refresh_profiles()
         self.refresh_tasks()
         self.refresh_history()
@@ -778,7 +806,7 @@ class MainWindow(QMainWindow):
             for col, val in enumerate(vals):
                 self.history_table.setItem(row, col, QTableWidgetItem(str(val)))
 
-    def dispatch(self, task):
+    def dispatch(self, task, scheduled=False):
         if self.future is not None:
             self.notify('Outra automação já está em execução.')
             return
@@ -797,9 +825,10 @@ class MainWindow(QMainWindow):
             return
         db.execute("UPDATE tasks SET status='running' WHERE id=?", (task['id'],))
         self.running_task = task
-        self.future = self.executor.submit(send, p, task['message'], task['mode'])
+        target = datetime.fromisoformat(task['scheduled_at']).timestamp() if scheduled and p['provider'] == 'window' else None
+        self.future = self.executor.submit(send, p, task['message'], task['mode'], target)
         self.refresh_tasks()
-        self.notify('Executando automação...')
+        self.notify('Preparando envio; mantenha o destino livre até o horário.' if target else 'Executando automação...')
 
     def tick(self):
         if self.future is not None:
@@ -816,11 +845,15 @@ class MainWindow(QMainWindow):
             self.refresh_tasks()
             self.refresh_history()
             self.notify('Falha: ' + error if error else 'Ação executada; entrega não confirmada.')
-        current = datetime.now().isoformat(timespec='seconds')
-        t = db.one("SELECT * FROM tasks WHERE status='pending' AND scheduled_at<=? "
-                   "ORDER BY scheduled_at LIMIT 1", (current,))
+        from app.automation.timing import PREPARE_SECONDS
+        now = datetime.now()
+        t = db.one("SELECT t.* FROM tasks t JOIN profiles p ON p.id=t.profile_id "
+                   "WHERE t.status='pending' AND (t.scheduled_at<=? OR "
+                   "(p.provider='window' AND t.scheduled_at<=?)) ORDER BY t.scheduled_at LIMIT 1",
+                   (now.isoformat(timespec='seconds'),
+                    (now + timedelta(seconds=PREPARE_SECONDS)).isoformat(timespec='seconds')))
         if t:
-            self.dispatch(t)
+            self.dispatch(t, scheduled=True)
 
     def show_normal(self):
         self.showNormal()

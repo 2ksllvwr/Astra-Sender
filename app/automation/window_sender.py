@@ -81,12 +81,11 @@ def composer_target(name):
 
 
 def discover_editors(root, discord=False):
-    controls = list(root.descendants(control_type='Edit'))
     if discord:
-        # Chromium can expose contenteditable through other UIA control types.
-        for kind in ('Document', 'Group', 'Custom'):
-            controls.extend(e for e in root.descendants(control_type=kind)
-                            if composer_target(editor_name(e)))
+        controls = [e for e in root.descendants()
+                    if e.element_info.control_type == 'Edit' or composer_target(editor_name(e))]
+    else:
+        controls = list(root.descendants(control_type='Edit'))
     result, seen = [], set()
     for e in controls:
         try:
@@ -115,7 +114,7 @@ def choose_editor(editors, expected='', discord=False):
         if not usable:
             raise RuntimeError('Campo de mensagem não encontrado pela acessibilidade. '
                                'Abra o chat, feche pesquisas/diálogos e use Detectar campos em Perfis. '
-                               'Se persistir, o cliente pode não expor o campo ao Windows.')
+                               'Use Diagnóstico em Perfis e copie o resultado para análise.')
         raise RuntimeError('Mais de um campo de mensagem encontrado. Feche conversas laterais '
                            'ou selecione o campo em Detectar campos. Nada foi enviado.')
     return usable[0]
@@ -150,19 +149,19 @@ def validate(profile, mode, message):
             raise ValueError('Informe o nome do campo do chat para confirmar o destino após abrir o link.')
 
 
-def send_window(profile, message, mode):
+def send_window(profile, message, mode, target=None):
     validate(profile, mode, message)
     if sys.platform != 'win32':
         raise RuntimeError('A seleção de janelas requer Windows.')
     import pythoncom
     pythoncom.CoInitialize()
     try:
-        return _send(profile, message, mode)
+        return _send(profile, message, mode, target)
     finally:
         pythoncom.CoUninitialize()
 
 
-def _send(profile, message, mode):
+def _send(profile, message, mode, target=None):
     import win32con
     import win32gui
     import pyautogui as pg
@@ -216,6 +215,33 @@ def _send(profile, message, mode):
         finally:
             if pyperclip.paste() == message:
                 pyperclip.copy(previous)
-    check_focus()
-    pg.press('enter')
-    return 'Enter enviado à janela selecionada. Recebimento da mensagem não confirmado.'
+    from app.automation.timing import dispatch_enter
+    prepared_name = editor_name(editor)
+    def final_check():
+        check_focus()
+        if editor_name(editor) != prepared_name:
+            raise RuntimeError('O campo mudou após preparar o envio. Enter cancelado.')
+        if mode == 'write' and read_editor_text(editor).replace('\r\n', '\n') != message.replace('\r\n', '\n'):
+            raise RuntimeError('O rascunho mudou após a preparação. Enter cancelado.')
+    return dispatch_enter(pg.press, final_check, target)
+
+
+def field_diagnostics(root):
+    """Only control metadata; do not read Text/Value patterns or message history."""
+    from collections import Counter
+    elements = root.descendants()
+    counts = Counter(e.element_info.control_type for e in elements)
+    lines = ['Tipos de controles: ' + str(dict(counts))]
+    for e in elements:
+        kind = e.element_info.control_type
+        name = editor_name(e)
+        if kind not in ('Edit', 'Document', 'Custom') and not composer_target(name):
+            continue
+        try:
+            lines.append(f'{kind} | nome={name[:160]!r} | visível={e.is_visible()} | '
+                         f'habilitado={e.is_enabled()} | focável={e.is_keyboard_focusable()}')
+        except Exception as exc:
+            lines.append(f'{kind}: {type(exc).__name__}')
+        if len(lines) >= 45:
+            break
+    return '\n'.join(lines)

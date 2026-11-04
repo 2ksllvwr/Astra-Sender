@@ -59,6 +59,8 @@ w.save_draft()
 assert db.one('SELECT default_message FROM profiles WHERE id=?', (pid,))['default_message'] == 'Teste de persistência'
 d = ScheduleDialog(w, profile_id=pid, draft='Teste')
 assert d.when.dateTime().isValid()
+assert d.when.displayFormat().endswith('HH:mm:ss')
+assert d.when.dateTime().toPython().second == 0
 assert d.mode.currentData() == 'write'
 t = db.create_task(pid, 'Teste', 'write', (datetime.now() + timedelta(days=1)).isoformat(timespec='seconds'))
 d2 = ScheduleDialog(w, task=db.one('SELECT * FROM tasks WHERE id=?', (t,)))

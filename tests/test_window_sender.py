@@ -72,6 +72,23 @@ class AutomaticComposerTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             choose_editor([search], discord=True)
 
+    def test_messletters_names_are_detected_without_manual_hint(self):
+        names = ('〘𠗫〙𝒞onversasٍ', '𝕮𝖔𝖓𝖛𝖊𝖗𝖘𝖆𝖘', 'Ｃｏｎｖｅｒｓａｓ',
+                 'ᴄᴏɴᴠᴇʀꜱᴀꜱ', 'C̷o̷n̷v̷e̷r̷s̷a̷s̷', '✦・𝓒𝓸𝓷𝓿𝓮𝓻𝓼𝓪𝓼・✦',
+                 '⦇ 飝馫 ⦆ 𝖢𝗈𝗇𝗏𝖾𝗋𝗌𝖺𝗌', '💬┃conversas\u200b')
+        for name in names:
+            with self.subTest(name=name):
+                message = self.editor('Conversar em # ' + name)
+                self.assertIs(choose_editor([self.editor('Pesquisar', (2,)), message],
+                                           discord=True), message)
+                self.assertIs(choose_editor([message], 'Conversar em # ' + name, True), message)
+                self.assertEqual(message.window_text(), 'Conversar em # ' + name)
+
+    def test_distinct_channel_decorations_are_not_discarded(self):
+        message = self.editor('Conversar em # ✦geral✦')
+        with self.assertRaises(RuntimeError):
+            choose_editor([message], 'Conversar em # ★geral★', True)
+
     def test_normalizes_unicode_and_localized_prefix_but_keeps_destination(self):
         message = self.editor('Mensagem # 𝒞onversas\u200b')
         self.assertIs(choose_editor([message], 'Conversar em # Conversas', True), message)

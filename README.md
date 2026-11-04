@@ -53,6 +53,8 @@ As compilações da branch principal são identificadas como **pré-versões**. 
 
 ### Discord
 
+A detecção automática reconhece o compositor pelo rótulo de mensagem, independentemente dos caracteres do nome do canal: letras estilizadas do Messletters, kanjis, emojis e marcas combinantes não precisam ser digitados manualmente. Ao fixar um destino, o nome é normalizado com Unicode NFKC e espaços/caracteres de formatação invisíveis; os enfeites visíveis são preservados para não confundir canais distintos.
+
 O aplicativo desktop é reconhecido pelo processo. Opcionalmente, informe o link `https://discord.com/channels/...` e abra esse chat antes de salvar. Se o campo estiver vazio, o Astra tenta detectar seu nome ao salvar, para conferir o destino no envio. A abertura pelo link usa um protocolo do cliente e é **experimental**. O nome do campo é verificado antes de colar; não use nomes genéricos quando houver destinos parecidos.
 
 O modo restaura a janela minimizada e precisa do foco do teclado. Envia com a conta conectada no aplicativo; não é uma integração em segundo plano. Envios para destinos diferentes são sequenciais. O campo deve estar vazio: o programa cancela diante de um rascunho existente, campo ambíguo ou mudança de foco. Aplicativos que não exponham o campo e seu conteúdo pela acessibilidade podem ser incompatíveis.

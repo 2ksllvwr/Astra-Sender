@@ -18,7 +18,7 @@ from app.automation.engine import send
 from app.database import db
 from app.ui.selector import Selector
 
-VERSION = '0.2.8'
+VERSION = '0.2.9'
 STYLE = """
 QWidget { background-color: #111b2a; color: #e7edf6; font: 10pt 'Segoe UI'; }
 QMainWindow { background-color: #0a1422; }
@@ -146,7 +146,7 @@ class ProfileDialog(QDialog):
         layout.addLayout(form)
         layout.addWidget(self.allow)
         explanation = QLabel('Janela + Enter restaura o destino e cola a mensagem de uma vez. '
-                             'Não precisa marcar o botão de envio. O envio usa o foco do teclado; '
+                             'Escrever e enviar substitui o rascunho existente. Não precisa marcar o botão de envio. O envio usa o foco do teclado; '
                              'tarefas simultâneas são executadas em sequência. '
                              'No Discord, o campo é detectado automaticamente. Com link, abra o chat desejado antes de salvar o perfil.')
         explanation.setObjectName('muted')

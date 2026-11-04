@@ -196,16 +196,11 @@ def _send(profile, message, mode, target=None):
             raise RuntimeError('O foco mudou. Envio cancelado para não digitar em outra janela.')
     check_focus()
     if mode == 'write':
-        # Refuse to append to an existing draft. Unsupported value patterns fail closed.
-        try:
-            existing = read_editor_text(editor)
-        except Exception as exc:
-            raise RuntimeError('O aplicativo não permite verificar o rascunho desse campo. Envio cancelado.') from exc
-        if existing.replace('\r', '').replace('\n', ''):
-            raise RuntimeError('O chat já contém um rascunho. Limpe o campo antes do envio automático.')
         previous = pyperclip.paste()
         try:
             pyperclip.copy(message)
+            check_focus()
+            pg.hotkey('ctrl', 'a')
             check_focus()
             pg.hotkey('ctrl', 'v')
             time.sleep(.3)

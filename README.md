@@ -8,7 +8,7 @@ Automação de mensagens para Windows, com perfis independentes,<br>
 agendamentos e uma interface que mantém tudo ao alcance.
 
 ![Windows](https://img.shields.io/badge/Windows-10%20%2F%2011-1477EB?style=flat-square)
-![Versão](https://img.shields.io/badge/versão-0.2.8%20beta-24374D?style=flat-square)
+![Versão](https://img.shields.io/badge/versão-0.2.9%20beta-24374D?style=flat-square)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-24374D?style=flat-square)
 
 **[Baixar para Windows](https://github.com/2ksllvwr/Astra-Sender/releases)** · **[Primeiros passos](#primeiros-passos)** · **[Desenvolvimento](docs/desenvolvimento.md)**
@@ -59,7 +59,7 @@ A detecção automática reconhece o compositor pelo rótulo de mensagem, indepe
 
 O aplicativo desktop é reconhecido pelo processo. Opcionalmente, informe o link `https://discord.com/channels/...` e abra esse chat antes de salvar. Se o campo estiver vazio, o Astra tenta detectar seu nome ao salvar, para conferir o destino no envio. A abertura pelo link usa um protocolo do cliente e é **experimental**. O nome do campo é verificado antes de colar; não use nomes genéricos quando houver destinos parecidos.
 
-O modo restaura a janela minimizada e precisa do foco do teclado. Envia com a conta conectada no aplicativo; não é uma integração em segundo plano. Envios para destinos diferentes são sequenciais. O campo deve estar vazio: o programa cancela diante de um rascunho existente, campo ambíguo ou mudança de foco. Aplicativos que não exponham o campo e seu conteúdo pela acessibilidade podem ser incompatíveis.
+O modo restaura a janela minimizada e precisa do foco do teclado. Envia com a conta conectada no aplicativo; não é uma integração em segundo plano. Envios para destinos diferentes são sequenciais. **Escrever e enviar** substitui o rascunho existente pela mensagem configurada (Ctrl+A e colar). **Somente enviar** mantém o texto que já está no campo. O programa cancela diante de campo ambíguo ou mudança de foco. Aplicativos que não exponham o campo e seu conteúdo pela acessibilidade podem ser incompatíveis.
 
 > Deixe o Astra Sender em execução para processar os agendamentos. Perfis antigos conservam o método anterior até serem editados. Os métodos por coordenadas continuam disponíveis.
 

@@ -46,6 +46,10 @@ from unittest.mock import patch
 with patch('app.automation.window_sender.list_windows', return_value=[]):
     pd = ProfileDialog(None)
     assert pd.provider.currentData() == 'window'
+    assert not pd.wait_release.isChecked()
+    assert pd.send_count.value() == 1
+    pd.send_count.setValue(3)
+    assert pd.send_count.value() == 3
     pd.close()
 w = MainWindow()
 assert w.windowTitle() == 'Astra Sender'

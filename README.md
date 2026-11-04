@@ -8,7 +8,7 @@ Automação de mensagens para Windows, com perfis independentes,<br>
 agendamentos e uma interface que mantém tudo ao alcance.
 
 ![Windows](https://img.shields.io/badge/Windows-10%20%2F%2011-1477EB?style=flat-square)
-![Versão](https://img.shields.io/badge/versão-0.2.9%20beta-24374D?style=flat-square)
+![Versão](https://img.shields.io/badge/versão-0.2.10%20beta-24374D?style=flat-square)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-24374D?style=flat-square)
 
 **[Baixar para Windows](https://github.com/2ksllvwr/Astra-Sender/releases)** · **[Primeiros passos](#primeiros-passos)** · **[Desenvolvimento](docs/desenvolvimento.md)**
@@ -143,3 +143,24 @@ Os métodos antigos por mouse/UIA não fazem preparação antecipada.
 Se a detecção falhar, abra **Perfis → Diagnóstico** e copie o relatório de
 controles para análise. Ele não consulta o conteúdo das mensagens, mas os
 rótulos podem conter nomes de canais.
+
+
+### Enviar após a liberação de um canal (0.2.10)
+
+Em **Perfis**, use **Janela + colar + Enter**, fixe o nome do campo com
+**Detectar campos** enquanto o canal estiver aberto e marque **Aguardar liberação
+do canal**. No agendamento, o horário indica quando começar a verificar o campo;
+a janela pode ser preparada 12 segundos antes. A espera dura até 60 segundos após
+o horário, sem aplicar o cancelamento de atraso de 1 segundo do modo normal.
+O Astra só cola e solicita Enter quando identifica o campo visível, habilitado e
+focável; não contorna bloqueios de moderação. A disponibilidade pela acessibilidade
+não comprova permissão de envio no servidor. Mantenha o Discord em foco.
+
+**Quantidade de envios** permite 1, 2 ou 3 cópias da mesma mensagem, em
+**Escrever e enviar**. Antes de repetir, o Astra espera o campo ficar vazio;
+se isso não acontecer em 2 segundos, interrompe e registra quantos Enter foram
+solicitados. Repetições não são confirmação de entrega e podem gerar duplicatas.
+Não há garantia de primeiro lugar nem de entrega, pois há latência do cliente e
+do servidor. O intervalo de verificação é de 50 ms mais o custo da leitura dos
+controles; a confirmação da colagem usa até 1 segundo, encerrando assim que o
+texto corresponde. Não há espera fixa de 300 ms após colar.

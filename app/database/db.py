@@ -77,6 +77,8 @@ def initialize_database():
                 'window_title': "TEXT NOT NULL DEFAULT ''",
                 'chat_url': "TEXT NOT NULL DEFAULT ''",
                 'editor_hint': "TEXT NOT NULL DEFAULT ''",
+                'wait_release': 'INTEGER NOT NULL DEFAULT 0',
+                'send_count': 'INTEGER NOT NULL DEFAULT 1',
             },
             'tasks': {'recurrence': "TEXT NOT NULL DEFAULT 'once'", 'result': "TEXT DEFAULT ''"},
         }
@@ -106,20 +108,24 @@ def execute(sql, params=()):
         return cur.lastrowid
 
 
-def save_profile(name, app_hint='', provider='auto', allow_foreground=True, profile_id=None, *, window_process='', window_title='', chat_url='', editor_hint=''):
+def save_profile(name, app_hint='', provider='auto', allow_foreground=True, profile_id=None, *, window_process='', window_title='', chat_url='', editor_hint='', wait_release=False, send_count=1):
     name = name.strip()
     if not name:
         raise ValueError('Informe um nome para o perfil.')
     if provider not in ('auto', 'uia', 'coords', 'window'):
         raise ValueError('Mecanismo de automacao invalido.')
+    if int(send_count) not in (1, 2, 3):
+        raise ValueError('Escolha de 1 a 3 envios.')
+    if (wait_release or int(send_count) > 1) and provider != 'window':
+        raise ValueError('Espera e múltiplos envios requerem Janela + colar + Enter.')
     values = (name, app_hint.strip(), provider, int(bool(allow_foreground)),
-              window_process, window_title, chat_url.strip(), editor_hint.strip())
+              window_process, window_title, chat_url.strip(), editor_hint.strip(), int(bool(wait_release)), int(send_count))
     with connect() as c:
         if profile_id is None:
-            cur = c.execute('''INSERT INTO profiles(name,app_hint,provider,allow_foreground,window_process,window_title,chat_url,editor_hint)
-                VALUES(?,?,?,?,?,?,?,?)''', values)
+            cur = c.execute('''INSERT INTO profiles(name,app_hint,provider,allow_foreground,window_process,window_title,chat_url,editor_hint,wait_release,send_count)
+                VALUES(?,?,?,?,?,?,?,?,?,?)''', values)
             return cur.lastrowid
-        cur = c.execute('''UPDATE profiles SET name=?,app_hint=?,provider=?,allow_foreground=?,window_process=?,window_title=?,chat_url=?,editor_hint=?
+        cur = c.execute('''UPDATE profiles SET name=?,app_hint=?,provider=?,allow_foreground=?,window_process=?,window_title=?,chat_url=?,editor_hint=?,wait_release=?,send_count=?
             WHERE id=?''', values + (profile_id,))
         if cur.rowcount != 1:
             raise ValueError('Perfil nao encontrado.')

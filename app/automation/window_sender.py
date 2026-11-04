@@ -101,6 +101,10 @@ def discover_editors(root, discord=False):
     return result
 
 
+class FieldUnavailable(RuntimeError):
+    pass
+
+
 def choose_editor(editors, expected='', discord=False):
     usable = [e for e in editors if e.is_visible() and e.is_enabled() and e.is_keyboard_focusable()]
     if expected:
@@ -112,7 +116,7 @@ def choose_editor(editors, expected='', discord=False):
         usable = [e for e in usable if composer_target(editor_name(e))]
     if len(usable) != 1:
         if not usable:
-            raise RuntimeError('Campo de mensagem não encontrado pela acessibilidade. '
+            raise FieldUnavailable('Campo de mensagem não encontrado pela acessibilidade. '
                                'Abra o chat, feche pesquisas/diálogos e use Detectar campos em Perfis. '
                                'Use Diagnóstico em Perfis e copie o resultado para análise.')
         raise RuntimeError('Mais de um campo de mensagem encontrado. Feche conversas laterais '
@@ -133,6 +137,32 @@ def read_editor_text(editor):
     raise RuntimeError('O aplicativo não permite verificar o texto desse campo. Envio cancelado.')
 
 
+def wait_available(find, check, timeout, clock=time.monotonic, sleep=time.sleep):
+    deadline = clock() + timeout
+    while True:
+        check()
+        try:
+            result = find()
+            if clock() > deadline:
+                raise TimeoutError('Prazo para detectar liberação encerrado. Nenhum novo Enter enviado.')
+            return result
+        except FieldUnavailable:
+            if clock() >= deadline:
+                raise TimeoutError('O campo não ficou disponível no prazo. Nenhum novo Enter enviado.')
+            sleep(min(.05, max(0, deadline - clock())))
+
+
+def wait_text(editor, expected, check, timeout=1.0):
+    deadline = time.monotonic() + timeout
+    while True:
+        check()
+        if read_editor_text(editor).replace('\r\n', '\n') == expected.replace('\r\n', '\n'):
+            return
+        if time.monotonic() >= deadline:
+            raise RuntimeError('O conteúdo do campo não foi confirmado. Próximo Enter cancelado.')
+        time.sleep(.02)
+
+
 def validate(profile, mode, message):
     if not profile.get('window_process'):
         raise ValueError('Escolha uma janela aberta em Perfis.')
@@ -140,6 +170,13 @@ def validate(profile, mode, message):
         raise ValueError('Autorize restaurar e focar a janela para enviar com Enter.')
     if mode == 'write' and not (message or '').strip():
         raise ValueError('Digite uma mensagem.')
+    count = int(profile.get('send_count', 1))
+    if count not in (1, 2, 3):
+        raise ValueError('Escolha de 1 a 3 envios.')
+    if count > 1 and mode not in ('write', 'configure'):
+        raise ValueError('Múltiplos envios requerem Escrever e enviar.')
+    if profile.get('wait_release') and not (profile.get('editor_hint') or '').strip():
+        raise ValueError('Fixe o Campo de texto do canal antes de usar a espera por liberação.')
     link = (profile.get('chat_url') or '').strip()
     if link:
         discord_route(link)
@@ -179,46 +216,71 @@ def _send(profile, message, mode, target=None):
         win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
     root = Desktop(backend='uia').window(handle=hwnd).wrapper_object()
     root.set_focus()
-    deadline = time.monotonic() + 8
-    while True:
-        try:
-            editor = choose_editor(discover_editors(root, window['discord']),
-                                   profile.get('editor_hint') or '', window['discord'])
-            break
-        except RuntimeError:
-            if time.monotonic() >= deadline:
-                raise
-            time.sleep(.25)
-    editor.set_focus()
-    time.sleep(.15)
-    def check_focus():
-        if win32gui.GetForegroundWindow() != hwnd or not editor.has_keyboard_focus():
-            raise RuntimeError('O foco mudou. Envio cancelado para não digitar em outra janela.')
-    check_focus()
-    if mode == 'write':
-        previous = pyperclip.paste()
-        try:
-            pyperclip.copy(message)
-            check_focus()
-            pg.hotkey('ctrl', 'a')
-            check_focus()
-            pg.hotkey('ctrl', 'v')
-            time.sleep(.3)
-            check_focus()
-            if read_editor_text(editor).replace('\r\n', '\n') != message.replace('\r\n', '\n'):
-                raise RuntimeError('O texto colado não pôde ser confirmado. Enter não foi enviado.')
-        finally:
-            if pyperclip.paste() == message:
-                pyperclip.copy(previous)
     from app.automation.timing import dispatch_enter
+    release = bool(profile.get('wait_release'))
+    def check_window():
+        if win32gui.GetForegroundWindow() != hwnd:
+            raise RuntimeError('O foco mudou. Envio cancelado.')
+    if release and target is not None:
+        # The scheduled time starts the release watch, not a late-send cutoff.
+        while time.time() < target:
+            check_window()
+            time.sleep(min(.05, max(0, target - time.time())))
+    def find():
+        # The usual Edit path avoids scanning chat history on every poll.
+        edits = root.descendants(control_type='Edit')
+        try:
+            candidate = choose_editor(edits, profile.get('editor_hint') or '', window['discord'])
+        except FieldUnavailable:
+            candidate = choose_editor(discover_editors(root, window['discord']),
+                                      profile.get('editor_hint') or '', window['discord'])
+        try:
+            readonly = candidate.iface_value.CurrentIsReadOnly
+        except Exception:
+            readonly = False
+        if readonly is True or readonly == 1:
+            raise FieldUnavailable('O campo ainda está bloqueado.')
+        return candidate
+    timeout = max(0, (target or time.time()) + 60 - time.time()) if release else 8
+    editor = wait_available(find, check_window, timeout)
+    editor.set_focus()
     prepared_name = editor_name(editor)
-    def final_check():
-        check_focus()
+    def check_focus():
+        check_window()
+        if not editor.has_keyboard_focus():
+            raise RuntimeError('O campo perdeu o foco. Envio cancelado.')
         if editor_name(editor) != prepared_name:
-            raise RuntimeError('O campo mudou após preparar o envio. Enter cancelado.')
-        if mode == 'write' and read_editor_text(editor).replace('\r\n', '\n') != message.replace('\r\n', '\n'):
-            raise RuntimeError('O rascunho mudou após a preparação. Enter cancelado.')
-    return dispatch_enter(pg.press, final_check, target)
+            raise RuntimeError('O destino mudou. Envio cancelado.')
+    count = int(profile.get('send_count', 1))
+    previous = pyperclip.paste() if mode == 'write' else None
+    results = []
+    try:
+        if mode == 'write':
+            pyperclip.copy(message)
+        for index in range(count):
+            if index:
+                # Do not pile up Enter events or overwrite an unprocessed draft.
+                wait_text(editor, '', check_focus, timeout=2)
+            if mode == 'write':
+                check_focus()
+                pg.hotkey('ctrl', 'a', _pause=False)
+                check_focus()
+                pg.hotkey('ctrl', 'v', _pause=False)
+                wait_text(editor, message, check_focus)
+            def final_check():
+                check_focus()
+                if mode == 'write' and read_editor_text(editor).replace('\r\n', '\n') != message.replace('\r\n', '\n'):
+                    raise RuntimeError('O texto mudou após a preparação. Enter cancelado.')
+            # Only the first send uses the fixed-time deadline. Release waits
+            # may legitimately complete after that deadline.
+            when = target if index == 0 and not release else None
+            results.append(dispatch_enter(pg.press, final_check, when))
+    except Exception as exc:
+        raise RuntimeError(f'{len(results)}/{count} Enter(s) solicitados. {exc}') from exc
+    finally:
+        if mode == 'write' and pyperclip.paste() == message:
+            pyperclip.copy(previous)
+    return f'{len(results)}/{count} Enter(s) solicitados. ' + ' | '.join(results)
 
 
 def field_diagnostics(root):

@@ -11,14 +11,14 @@ from PySide6.QtWidgets import (
     QApplication, QAbstractItemView, QCheckBox, QComboBox, QDateTimeEdit,
     QDialog, QFormLayout, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
     QMainWindow, QMenu, QMessageBox, QPushButton, QStyle, QSystemTrayIcon,
-    QTabWidget, QTableWidget, QTableWidgetItem, QTextEdit, QVBoxLayout, QWidget,
+    QSpinBox, QTabWidget, QTableWidget, QTableWidgetItem, QTextEdit, QVBoxLayout, QWidget,
 )
 
 from app.automation.engine import send
 from app.database import db
 from app.ui.selector import Selector
 
-VERSION = '0.2.9'
+VERSION = '0.2.10'
 STYLE = """
 QWidget { background-color: #111b2a; color: #e7edf6; font: 10pt 'Segoe UI'; }
 QMainWindow { background-color: #0a1422; }
@@ -141,6 +141,16 @@ class ProfileDialog(QDialog):
         editor_row.addWidget(button('Detectar campos', self.detect_fields))
         editor_row.addWidget(button('Diagnóstico', self.diagnose_fields))
         form.addRow('Campo de texto', editor_row)
+        self.wait_release = QCheckBox('Aguardar liberação do canal (até 60 s após o horário)')
+        self.wait_release.setChecked(bool(self.record.get('wait_release', False)))
+        form.addRow(self.wait_release)
+        self.send_count = QSpinBox()
+        self.send_count.setRange(1, 3)
+        self.send_count.setValue(int(self.record.get('send_count', 1)))
+        form.addRow('Quantidade de envios', self.send_count)
+        repeat_note = QLabel('2 ou 3 envios repetem a mesma mensagem. Não confirmam recebimento. Para aguardar liberação, fixe o Campo de texto com o canal aberto antes de ele ser bloqueado.')
+        repeat_note.setWordWrap(True)
+        form.addRow(repeat_note)
         self.refresh_windows()
 
         layout.addLayout(form)
@@ -254,14 +264,16 @@ class ProfileDialog(QDialog):
             options = dict(window_process=(w or {}).get('process', self.record.get('window_process', '')),
                            window_title=(w or {}).get('title', self.record.get('window_title', '')),
                            chat_url=self.chat.text() if self.chat.isEnabled() else '',
-                           editor_hint=self.editor.text())
-            if (self.provider.currentData() == 'window' and options['chat_url'].strip()
+                           editor_hint=self.editor.text(),
+                           wait_release=self.wait_release.isChecked(),
+                           send_count=self.send_count.value())
+            if (self.provider.currentData() == 'window' and (options['chat_url'].strip() or options['wait_release'])
                     and not options['editor_hint'].strip()):
                 self.detect_fields()
                 options['editor_hint'] = self.editor.text()
             if self.provider.currentData() == 'window':
                 from app.automation.window_sender import validate
-                validate(dict(options, allow_foreground=self.allow.isChecked()), 'click', '')
+                validate(dict(options, allow_foreground=self.allow.isChecked()), 'configure', '')
             self.saved_id = db.save_profile(self.name.text(), self.hint.text(),
                                             self.provider.currentData(), self.allow.isChecked(),
                                             self.record.get('id'), **options)

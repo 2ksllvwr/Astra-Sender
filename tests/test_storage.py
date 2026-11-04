@@ -25,6 +25,16 @@ class DatabaseTests(unittest.TestCase):
             c.execute('DELETE FROM profiles')
             c.execute('DELETE FROM history')
 
+    def test_release_options_roundtrip_and_defaults(self):
+        pid = db.save_profile('Discord', provider='window', wait_release=True, send_count=3)
+        p = db.one('SELECT * FROM profiles WHERE id=?', (pid,))
+        self.assertEqual((p['wait_release'], p['send_count']), (1, 3))
+        db.save_profile('Discord', provider='window', profile_id=pid)
+        p = db.one('SELECT * FROM profiles WHERE id=?', (pid,))
+        self.assertEqual((p['wait_release'], p['send_count']), (0, 1))
+        with self.assertRaises(ValueError):
+            db.save_profile('Bad', provider='window', send_count=4)
+
     def test_profile_saves_with_no_coordinates_and_survives_reconnect(self):
         profile_id = db.save_profile('  Discord ', 'Discord', 'auto', True)
         p = db.one('SELECT * FROM profiles WHERE id=?', (profile_id,))

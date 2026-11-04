@@ -33,6 +33,16 @@ class DatabaseTests(unittest.TestCase):
         db.initialize_database()  # reinicializacao nao apaga registros
         self.assertEqual(db.one('SELECT name FROM profiles WHERE id=?', (profile_id,))['name'], 'Discord')
 
+    def test_window_profile_roundtrip(self):
+        pid = db.save_profile('Janela', provider='window', window_process='app.exe',
+                              window_title='Chat', editor_hint='Mensagem', chat_url='')
+        db.initialize_database()
+        p = db.one('SELECT * FROM profiles WHERE id=?', (pid,))
+        self.assertEqual(p['window_process'], 'app.exe')
+        self.assertEqual(p['window_title'], 'Chat')
+        self.assertEqual(p['editor_hint'], 'Mensagem')
+        self.assertIsNone(p['send_x'])
+
     def test_edit_profile_and_save_coordinates_and_message(self):
         profile_id = db.save_profile('Telegram')
         self.assertEqual(db.save_profile('Telegram teste', 'Telegram', 'coords', True, profile_id), profile_id)

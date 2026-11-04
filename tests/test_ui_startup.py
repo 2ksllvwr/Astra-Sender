@@ -37,11 +37,16 @@ class CompactUiTests(unittest.TestCase):
 from datetime import datetime, timedelta
 from PySide6.QtWidgets import QApplication, QDialog
 from app.database import db
-from app.ui.main_window import MainWindow, ScheduleDialog
+from app.ui.main_window import MainWindow, ScheduleDialog, ProfileDialog
 
 db.initialize_database()
 app = QApplication([])
 pid = db.save_profile('Teste UI')
+from unittest.mock import patch
+with patch('app.automation.window_sender.list_windows', return_value=[]):
+    pd = ProfileDialog(None)
+    assert pd.provider.currentData() == 'window'
+    pd.close()
 w = MainWindow()
 assert w.windowTitle() == 'Astra Sender'
 assert [w.tabs.tabText(i) for i in range(w.tabs.count())] == ['Enviar','Agendamentos','Histórico','Perfis']

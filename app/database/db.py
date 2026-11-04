@@ -73,6 +73,10 @@ def initialize_database():
                 'send_x': 'INTEGER', 'send_y': 'INTEGER',
                 'allow_foreground': 'INTEGER NOT NULL DEFAULT 1',
                 'default_message': "TEXT NOT NULL DEFAULT ''",
+                'window_process': "TEXT NOT NULL DEFAULT ''",
+                'window_title': "TEXT NOT NULL DEFAULT ''",
+                'chat_url': "TEXT NOT NULL DEFAULT ''",
+                'editor_hint': "TEXT NOT NULL DEFAULT ''",
             },
             'tasks': {'recurrence': "TEXT NOT NULL DEFAULT 'once'", 'result': "TEXT DEFAULT ''"},
         }
@@ -102,19 +106,20 @@ def execute(sql, params=()):
         return cur.lastrowid
 
 
-def save_profile(name, app_hint='', provider='auto', allow_foreground=True, profile_id=None):
+def save_profile(name, app_hint='', provider='auto', allow_foreground=True, profile_id=None, *, window_process='', window_title='', chat_url='', editor_hint=''):
     name = name.strip()
     if not name:
         raise ValueError('Informe um nome para o perfil.')
-    if provider not in ('auto', 'uia', 'coords'):
+    if provider not in ('auto', 'uia', 'coords', 'window'):
         raise ValueError('Mecanismo de automacao invalido.')
-    values = (name, app_hint.strip(), provider, int(bool(allow_foreground)))
+    values = (name, app_hint.strip(), provider, int(bool(allow_foreground)),
+              window_process, window_title, chat_url.strip(), editor_hint.strip())
     with connect() as c:
         if profile_id is None:
-            cur = c.execute('''INSERT INTO profiles(name,app_hint,provider,allow_foreground)
-                VALUES(?,?,?,?)''', values)
+            cur = c.execute('''INSERT INTO profiles(name,app_hint,provider,allow_foreground,window_process,window_title,chat_url,editor_hint)
+                VALUES(?,?,?,?,?,?,?,?)''', values)
             return cur.lastrowid
-        cur = c.execute('''UPDATE profiles SET name=?,app_hint=?,provider=?,allow_foreground=?
+        cur = c.execute('''UPDATE profiles SET name=?,app_hint=?,provider=?,allow_foreground=?,window_process=?,window_title=?,chat_url=?,editor_hint=?
             WHERE id=?''', values + (profile_id,))
         if cur.rowcount != 1:
             raise ValueError('Perfil nao encontrado.')

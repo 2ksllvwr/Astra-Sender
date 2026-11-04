@@ -8,7 +8,7 @@ Automação de mensagens para Windows, com perfis independentes,<br>
 agendamentos e uma interface que mantém tudo ao alcance.
 
 ![Windows](https://img.shields.io/badge/Windows-10%20%2F%2011-1477EB?style=flat-square)
-![Versão](https://img.shields.io/badge/versão-0.2.4%20beta-24374D?style=flat-square)
+![Versão](https://img.shields.io/badge/versão-0.2.5%20beta-24374D?style=flat-square)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-24374D?style=flat-square)
 
 **[Baixar para Windows](https://github.com/2ksllvwr/Astra-Sender/releases)** · **[Primeiros passos](#primeiros-passos)** · **[Desenvolvimento](docs/desenvolvimento.md)**
@@ -45,13 +45,19 @@ As compilações da branch principal são identificadas como **pré-versões**. 
 
 ## Primeiros passos
 
-1. **Crie um perfil.** Em **Perfis → + Novo**, dê um nome ao destino e indique o aplicativo.
-2. **Marque os pontos.** Com a janela de destino aberta, use **Marcar campo** e **Marcar envio**.
-3. **Prepare a mensagem.** Na aba **Enviar**, selecione o perfil e escreva o texto. Use **Salvar Mensagem** para reutilizá-lo.
-4. **Escolha quando enviar.** Clique em **Enviar Agora** ou em **Agendar…**, definindo a data, o horário e a repetição.
-5. **Confira a execução.** Consulte **Histórico** para verificar as ações registradas ou identificar falhas.
+1. Abra **Perfis → + Novo** (ou edite um perfil antigo).
+2. Escolha **Janela + colar + Enter** e selecione o destino em **Janelas abertas**. Use **Atualizar** se acabou de abrir o aplicativo.
+3. Com o chat aberto, clique em **Detectar campos** e selecione o campo de mensagem, não a pesquisa. Quando houver um único campo compatível, o nome pode ficar vazio.
+4. Autorize o uso do mouse/teclado e salve. Não é necessário marcar o botão de envio.
+5. Em **Enviar**, escreva a mensagem e escolha **Enviar Agora** ou **Agendar…**.
 
-> Deixe o Astra Sender em execução para processar os agendamentos. Quando a bandeja do Windows estiver disponível, o aplicativo pode permanecer minimizado nela.
+### Discord
+
+O aplicativo desktop é reconhecido pelo processo. Opcionalmente, informe o link `https://discord.com/channels/...` e selecione o nome acessível do campo desse chat. A abertura pelo link usa um protocolo do cliente e é **experimental**. O nome do campo é verificado antes de colar; não use nomes genéricos quando houver destinos parecidos.
+
+O modo restaura a janela minimizada e precisa do foco do teclado. Envia com a conta conectada no aplicativo; não é uma integração em segundo plano. Envios para destinos diferentes são sequenciais. O campo deve estar vazio: o programa cancela diante de um rascunho existente, campo ambíguo ou mudança de foco. Aplicativos que não exponham o campo e seu conteúdo pela acessibilidade podem ser incompatíveis.
+
+> Deixe o Astra Sender em execução para processar os agendamentos. Perfis antigos conservam o método anterior até serem editados. Os métodos por coordenadas continuam disponíveis.
 
 ## Quatro abas, uma interface direta
 

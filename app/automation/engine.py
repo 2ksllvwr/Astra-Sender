@@ -87,6 +87,9 @@ def send(profile, message, mode):
     if mode == 'write' and not (message or '').strip():
         raise ValueError('Mensagem vazia.')
     provider = profile.get('provider') or 'auto'
+    if provider == 'window':
+        from app.automation.window_sender import send_window
+        return send_window(profile, message, mode)
     foreground_allowed = bool(profile.get('allow_foreground'))
     if provider in ('auto', 'uia'):
         try:

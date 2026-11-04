@@ -18,7 +18,7 @@ from app.automation.engine import send
 from app.database import db
 from app.ui.selector import Selector
 
-VERSION = '0.2.4'
+VERSION = '0.2.5'
 STYLE = """
 QWidget { background-color: #111b2a; color: #e7edf6; font: 10pt 'Segoe UI'; }
 QMainWindow { background-color: #0a1422; }
@@ -112,10 +112,11 @@ class ProfileDialog(QDialog):
         self.hint = QLineEdit(self.record.get('app_hint') or '')
         self.hint.setPlaceholderText('Parte do título da janela (opcional)')
         self.provider = QComboBox()
+        self.provider.addItem('Janela + colar + Enter', 'window')
         self.provider.addItem('Automático (UIA / mouse)', 'auto')
         self.provider.addItem('Apenas mouse / coordenadas', 'coords')
         self.provider.addItem('Apenas acessibilidade (UIA)', 'uia')
-        i = self.provider.findData(self.record.get('provider') or 'auto')
+        i = self.provider.findData(self.record.get('provider') or 'window')
         self.provider.setCurrentIndex(max(0, i))
         self.allow = QCheckBox('Permitir uso do mouse/teclado quando necessário')
         self.allow.setChecked(bool(self.record.get('allow_foreground', 1)))
@@ -123,10 +124,30 @@ class ProfileDialog(QDialog):
         form.addRow('Nome', self.name)
         form.addRow('Janela', self.hint)
         form.addRow('Método', self.provider)
+        self.windows = QComboBox()
+        self.windows.setMinimumWidth(320)
+        self.windows.currentIndexChanged.connect(self.window_changed)
+        window_row = QHBoxLayout()
+        window_row.addWidget(self.windows, 1)
+        window_row.addWidget(button('Atualizar', self.refresh_windows))
+        form.addRow('Janelas abertas', window_row)
+        self.chat = QLineEdit(self.record.get('chat_url') or '')
+        self.chat.setPlaceholderText('https://discord.com/channels/... (opcional)')
+        form.addRow('Chat do Discord', self.chat)
+        self.editor = QLineEdit(self.record.get('editor_hint') or '')
+        self.editor.setPlaceholderText('Ex.: Mensagem #geral; vazio se houver um único campo')
+        editor_row = QHBoxLayout()
+        editor_row.addWidget(self.editor, 1)
+        editor_row.addWidget(button('Detectar campos', self.detect_fields))
+        form.addRow('Campo de texto', editor_row)
+        self.refresh_windows()
+
         layout.addLayout(form)
         layout.addWidget(self.allow)
-        explanation = QLabel('Você pode criar o perfil agora e marcar os pontos depois. '
-                             'O envio por coordenadas pode trocar a janela ativa.')
+        explanation = QLabel('Janela + Enter restaura o destino e cola a mensagem de uma vez. '
+                             'Não precisa marcar o botão de envio. O envio usa o foco do teclado; '
+                             'tarefas simultâneas são executadas em sequência. '
+                             'O link do Discord é experimental: confirme o nome do campo do chat.')
         explanation.setObjectName('muted')
         explanation.setWordWrap(True)
         layout.addWidget(explanation)
@@ -137,6 +158,54 @@ class ProfileDialog(QDialog):
         controls.addWidget(button('Salvar perfil', self.save, 'primary'))
         layout.addLayout(controls)
 
+    def refresh_windows(self):
+        from app.automation.window_sender import list_windows
+        current = self.windows.currentData() or self.record
+        self.windows.blockSignals(True)
+        self.windows.clear()
+        self.windows.addItem('Selecione uma janela…', None)
+        try:
+            for w in list_windows():
+                prefix = 'Discord · ' if w['discord'] else ''
+                suffix = ' (minimizada)' if w['minimized'] else ''
+                self.windows.addItem(prefix + w['title'] + suffix, w)
+                if (w['process'] == current.get('process', current.get('window_process')) and
+                        w['title'] == current.get('title', current.get('window_title'))):
+                    self.windows.setCurrentIndex(self.windows.count() - 1)
+        except Exception as exc:
+            QMessageBox.warning(self, 'Janelas', str(exc))
+        self.windows.blockSignals(False)
+        self.window_changed()
+
+    def window_changed(self):
+        if not hasattr(self, 'chat'):
+            return
+        w = self.windows.currentData()
+        is_discord = bool(w and w['discord'])
+        self.chat.setEnabled(is_discord)
+        if w and not self.name.text().strip():
+            self.name.setText('Discord' if is_discord else w['title'])
+
+    def detect_fields(self):
+        w = self.windows.currentData()
+        if not w:
+            return QMessageBox.information(self, 'Campos', 'Selecione uma janela aberta primeiro.')
+        try:
+            from pywinauto import Desktop
+            root = Desktop(backend='uia').window(handle=w['hwnd']).wrapper_object()
+            fields = [e.window_text() for e in root.descendants(control_type='Edit')
+                      if e.is_enabled() and e.is_keyboard_focusable()]
+            fields = list(dict.fromkeys(n for n in fields if n))
+            if not fields:
+                raise RuntimeError('Nenhum campo identificado. Abra o chat na janela de destino e tente novamente.')
+            from PySide6.QtWidgets import QInputDialog
+            choice, ok = QInputDialog.getItem(self, 'Campo de mensagem',
+                                              'Selecione o campo usado para escrever (não a pesquisa):', fields, 0, False)
+            if ok:
+                self.editor.setText(choice)
+        except Exception as exc:
+            QMessageBox.warning(self, 'Detectar campos', str(exc))
+
     def update_permission(self):
         uia_only = self.provider.currentData() == 'uia'
         self.allow.setEnabled(not uia_only)
@@ -145,9 +214,17 @@ class ProfileDialog(QDialog):
 
     def save(self):
         try:
+            w = self.windows.currentData()
+            options = dict(window_process=(w or {}).get('process', self.record.get('window_process', '')),
+                           window_title=(w or {}).get('title', self.record.get('window_title', '')),
+                           chat_url=self.chat.text() if self.chat.isEnabled() else '',
+                           editor_hint=self.editor.text())
+            if self.provider.currentData() == 'window':
+                from app.automation.window_sender import validate
+                validate(dict(options, allow_foreground=self.allow.isChecked()), 'click', '')
             self.saved_id = db.save_profile(self.name.text(), self.hint.text(),
                                             self.provider.currentData(), self.allow.isChecked(),
-                                            self.record.get('id'))
+                                            self.record.get('id'), **options)
         except Exception as exc:
             QMessageBox.critical(self, 'Falha ao salvar', str(exc))
             return
@@ -173,7 +250,7 @@ class ScheduleDialog(QDialog):
             self.profile.setCurrentIndex(index)
         self.mode = QComboBox()
         self.mode.addItem('Escrever e enviar', 'write')
-        self.mode.addItem('Somente clicar no botão', 'click')
+        self.mode.addItem('Somente enviar (Enter ou botão)', 'click')
         mode = task['mode'] if task else mode
         i = self.mode.findData(mode)
         self.mode.setCurrentIndex(max(0, i))
@@ -410,7 +487,7 @@ class MainWindow(QMainWindow):
         self.profiles_table.setRowCount(len(profiles))
         for row, p in enumerate(profiles):
             items = [p['name'], p['app_hint'] or '—',
-                     {'auto': 'Automático', 'coords': 'Coordenadas', 'uia': 'UIA'}.get(p['provider'], p['provider']),
+                     {'window': 'Janela + Enter', 'auto': 'Automático', 'coords': 'Coordenadas', 'uia': 'UIA'}.get(p['provider'], p['provider']),
                      self.coord_string(p, 'message'), self.coord_string(p, 'send')]
             for col, value in enumerate(items):
                 item = QTableWidgetItem(str(value))
@@ -433,6 +510,8 @@ class MainWindow(QMainWindow):
         if p:
             self.coord_label.setText('Campo: ' + self.coord_string(p, 'message') +
                                      '   |   Envio: ' + self.coord_string(p, 'send'))
+            if p.get('provider') == 'window':
+                self.coord_label.setText('Janela selecionada · Colar + Enter')
             for row in range(self.profiles_table.rowCount()):
                 item = self.profiles_table.item(row, 0)
                 if item and item.data(Qt.ItemDataRole.UserRole) == p['id']:
@@ -529,6 +608,13 @@ class MainWindow(QMainWindow):
     def validate_profile(profile, mode, message):
         if not profile:
             return 'Crie ou selecione um perfil.'
+        if profile.get('provider') == 'window':
+            from app.automation.window_sender import validate
+            try:
+                validate(profile, mode, message)
+            except ValueError as exc:
+                return str(exc)
+            return None
         if profile.get('send_x') is None or profile.get('send_y') is None:
             return 'Marque o botão de enviar no perfil.'
         if mode == 'write':

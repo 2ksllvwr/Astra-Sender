@@ -18,7 +18,7 @@ from app.automation.engine import send
 from app.database import db
 from app.ui.selector import Selector
 
-VERSION = '0.2.6'
+VERSION = '0.2.7'
 STYLE = """
 QWidget { background-color: #111b2a; color: #e7edf6; font: 10pt 'Segoe UI'; }
 QMainWindow { background-color: #0a1422; }
@@ -193,7 +193,7 @@ class ProfileDialog(QDialog):
         try:
             from pywinauto import Desktop
             root = Desktop(backend='uia').window(handle=w['hwnd']).wrapper_object()
-            from app.automation.window_sender import discover_editors, choose_editor
+            from app.automation.window_sender import discover_editors, choose_editor, editor_name, normalized_name
             if root.is_minimized():
                 root.restore()
             candidates = discover_editors(root, w['discord'])
@@ -202,12 +202,14 @@ class ProfileDialog(QDialog):
             except RuntimeError:
                 chosen = None
             if chosen is not None:
-                self.editor.setText(chosen.window_text())
+                self.editor.setText(editor_name(chosen))
                 return
-            fields = [e.window_text() for e in candidates]
-            fields = list(dict.fromkeys(n for n in fields if n))
+            fields = [editor_name(e) for e in candidates]
+            fields = list(dict.fromkeys(n for n in fields if normalized_name(n)))
             if not fields:
-                raise RuntimeError('Nenhum campo identificado. Abra o chat na janela de destino e tente novamente.')
+                raise RuntimeError(f'Foram encontrados {len(candidates)} campos, mas nenhum com nome acessível. '
+                                   'O Discord pode não estar expondo os rótulos ao Windows. '
+                                   'Nenhuma mensagem foi enviada.')
             from PySide6.QtWidgets import QInputDialog
             choice, ok = QInputDialog.getItem(self, 'Campo de mensagem',
                                               'Selecione o campo usado para escrever (não a pesquisa):', fields, 0, False)

@@ -56,6 +56,19 @@ def resolve_window(profile, windows):
     raise RuntimeError('A janela selecionada não está aberta ou ficou ambígua. Selecione-a novamente em Perfis.')
 
 
+def editor_name(editor):
+    """Accessible label, never TextPattern contents or the current draft."""
+    for read in (lambda: editor.element_info.name,
+                 lambda: editor.iface_legacy_iaccessible.CurrentName):
+        try:
+            name = read()
+            if isinstance(name, str) and normalized_name(name):
+                return name
+        except Exception:
+            pass
+    return ''
+
+
 def normalized_name(value):
     value = unicodedata.normalize('NFKC', value).casefold()
     return ' '.join(''.join(c for c in value if unicodedata.category(c) != 'Cf').split())
@@ -73,7 +86,7 @@ def discover_editors(root, discord=False):
         # Chromium can expose contenteditable through other UIA control types.
         for kind in ('Document', 'Group', 'Custom'):
             controls.extend(e for e in root.descendants(control_type=kind)
-                            if composer_target(e.window_text()))
+                            if composer_target(editor_name(e)))
     result, seen = [], set()
     for e in controls:
         try:
@@ -94,10 +107,10 @@ def choose_editor(editors, expected='', discord=False):
     if expected:
         wanted = normalized_name(expected)
         target = composer_target(expected) if discord else None
-        usable = [e for e in usable if normalized_name(e.window_text()) == wanted or
-                  (target is not None and composer_target(e.window_text()) == target)]
+        usable = [e for e in usable if normalized_name(editor_name(e)) == wanted or
+                  (target is not None and composer_target(editor_name(e)) == target)]
     elif discord:
-        usable = [e for e in usable if composer_target(e.window_text())]
+        usable = [e for e in usable if composer_target(editor_name(e))]
     if len(usable) != 1:
         if not usable:
             raise RuntimeError('Campo de mensagem não encontrado pela acessibilidade. '

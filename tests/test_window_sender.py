@@ -33,6 +33,7 @@ class WindowSenderTests(unittest.TestCase):
             e = Mock()
             e.is_visible.return_value = e.is_enabled.return_value = e.is_keyboard_focusable.return_value = True
             e.window_text.return_value = name
+            e.element_info.name = name
             return e
         search, message = editor('Pesquisar'), editor('Mensagem #geral')
         self.assertIs(choose_editor([search,message], 'Mensagem #geral'), message)
@@ -62,6 +63,7 @@ class AutomaticComposerTests(unittest.TestCase):
         e = Mock()
         e.is_visible.return_value = e.is_enabled.return_value = e.is_keyboard_focusable.return_value = True
         e.window_text.return_value = name
+        e.element_info.name = name
         e.element_info.runtime_id = runtime_id
         return e
 
@@ -130,3 +132,34 @@ class AutomaticComposerTests(unittest.TestCase):
         e.iface_text.DocumentRange.GetText.side_effect = RuntimeError('unsupported')
         with self.assertRaises(RuntimeError):
             read_editor_text(e)
+
+
+class AccessibleLabelTests(unittest.TestCase):
+    def test_empty_composer_uses_accessible_name_not_text(self):
+        from app.automation.window_sender import editor_name, discover_editors
+        e = Mock()
+        e.element_info.name = 'Conversar em #𝕲𝖊𝖗𝖆𝖑'
+        e.element_info.runtime_id = [1, 2]
+        e.window_text.return_value = '\n'
+        e.is_visible.return_value = e.is_enabled.return_value = e.is_keyboard_focusable.return_value = True
+        root = Mock()
+        root.descendants.side_effect = lambda control_type: [e] if control_type == 'Document' else []
+        self.assertEqual(editor_name(e), 'Conversar em #𝕲𝖊𝖗𝖆𝖑')
+        self.assertIs(choose_editor(discover_editors(root, True), discord=True), e)
+        e.window_text.assert_not_called()
+
+    def test_draft_text_cannot_impersonate_composer_label(self):
+        e = Mock()
+        e.element_info.name = 'Pesquisar'
+        e.window_text.return_value = 'Conversar em #geral'
+        with self.assertRaises(RuntimeError):
+            choose_editor([e], discord=True)
+
+    def test_missing_and_whitespace_names_are_not_menu_choices(self):
+        from app.automation.window_sender import editor_name
+        e = Mock()
+        e.element_info.name = ' \n\u200b'
+        e.iface_legacy_iaccessible.CurrentName = ''
+        self.assertEqual(editor_name(e), '')
+        e.iface_legacy_iaccessible.CurrentName = 'Message #general'
+        self.assertEqual(editor_name(e), 'Message #general')

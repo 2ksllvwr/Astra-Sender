@@ -8,7 +8,7 @@ Automação de mensagens para Windows, com perfis independentes,<br>
 agendamentos e uma interface que mantém tudo ao alcance.
 
 ![Windows](https://img.shields.io/badge/Windows-10%20%2F%2011-1477EB?style=flat-square)
-![Versão](https://img.shields.io/badge/versão-0.2.6%20beta-24374D?style=flat-square)
+![Versão](https://img.shields.io/badge/versão-0.2.7%20beta-24374D?style=flat-square)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-24374D?style=flat-square)
 
 **[Baixar para Windows](https://github.com/2ksllvwr/Astra-Sender/releases)** · **[Primeiros passos](#primeiros-passos)** · **[Desenvolvimento](docs/desenvolvimento.md)**
@@ -52,6 +52,8 @@ As compilações da branch principal são identificadas como **pré-versões**. 
 5. Em **Enviar**, escreva a mensagem e escolha **Enviar Agora** ou **Agendar…**.
 
 ### Discord
+
+A versão 0.2.7 corrige a leitura do rótulo de acessibilidade: o conteúdo vazio da caixa não é mais usado como nome do campo.
 
 A detecção automática reconhece o compositor pelo rótulo de mensagem, independentemente dos caracteres do nome do canal: letras estilizadas do Messletters, kanjis, emojis e marcas combinantes não precisam ser digitados manualmente. Ao fixar um destino, o nome é normalizado com Unicode NFKC e espaços/caracteres de formatação invisíveis; os enfeites visíveis são preservados para não confundir canais distintos.
 

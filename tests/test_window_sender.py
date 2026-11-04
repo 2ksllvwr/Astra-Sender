@@ -55,3 +55,61 @@ class WindowSenderTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate(p, 'write', 'Teste')
         validate(dict(p, editor_hint='Mensagem #geral'), 'write', 'Teste')
+
+
+class AutomaticComposerTests(unittest.TestCase):
+    def editor(self, name, runtime_id=(1,)):
+        e = Mock()
+        e.is_visible.return_value = e.is_enabled.return_value = e.is_keyboard_focusable.return_value = True
+        e.window_text.return_value = name
+        e.element_info.runtime_id = runtime_id
+        return e
+
+    def test_discord_selects_composer_without_selecting_search(self):
+        search = self.editor('Pesquisar', (2,))
+        message = self.editor('Conversar em # 〘𠗫〙𝒞onversasٍ')
+        self.assertIs(choose_editor([search, message], discord=True), message)
+        with self.assertRaises(RuntimeError):
+            choose_editor([search], discord=True)
+
+    def test_normalizes_unicode_and_localized_prefix_but_keeps_destination(self):
+        message = self.editor('Mensagem # 𝒞onversas\u200b')
+        self.assertIs(choose_editor([message], 'Conversar em # Conversas', True), message)
+        with self.assertRaises(RuntimeError):
+            choose_editor([message], 'Conversar em # Outro', True)
+        with self.assertRaises(RuntimeError):
+            choose_editor([message], 'Mensagem', True)
+
+    def test_two_composers_must_not_choose_arbitrarily(self):
+        a, b = self.editor('Message #general'), self.editor('Message #thread', (2,))
+        with self.assertRaises(RuntimeError):
+            choose_editor([a, b], discord=True)
+        self.assertIs(choose_editor([a, b], 'Message #thread', True), b)
+
+    def test_document_composer_is_discovered_and_runtime_duplicates_removed(self):
+        from app.automation.window_sender import discover_editors
+        search = self.editor('Pesquisar', (2,))
+        composer = self.editor('Conversar em #geral')
+        duplicate = self.editor('Conversar em #geral')
+        page = self.editor('Discord', (3,))
+        hidden = self.editor('Message #hidden', (4,))
+        hidden.is_visible.return_value = False
+        root = Mock()
+        root.descendants.side_effect = lambda control_type: {
+            'Edit': [search], 'Document': [page, composer],
+            'Group': [duplicate, hidden], 'Custom': []}[control_type]
+        found = discover_editors(root, True)
+        self.assertEqual(found, [search, composer])
+        self.assertIs(choose_editor(found, discord=True), composer)
+
+    def test_reads_text_pattern_when_value_not_available(self):
+        from app.automation.window_sender import read_editor_text
+        e = Mock()
+        e.iface_text.DocumentRange.GetText.return_value = 'Teste'
+        self.assertEqual(read_editor_text(e), 'Teste')
+        e.iface_value.CurrentValue = ''
+        self.assertEqual(read_editor_text(e), '')
+        e.iface_value.CurrentValue = None
+        e.iface_text.DocumentRange.GetText.side_effect = RuntimeError('unsupported')
+        with self.assertRaises(RuntimeError):
+            read_editor_text(e)

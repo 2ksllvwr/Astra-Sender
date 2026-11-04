@@ -18,7 +18,7 @@ from app.automation.engine import send
 from app.database import db
 from app.ui.selector import Selector
 
-VERSION = '0.2.5'
+VERSION = '0.2.6'
 STYLE = """
 QWidget { background-color: #111b2a; color: #e7edf6; font: 10pt 'Segoe UI'; }
 QMainWindow { background-color: #0a1422; }
@@ -135,7 +135,7 @@ class ProfileDialog(QDialog):
         self.chat.setPlaceholderText('https://discord.com/channels/... (opcional)')
         form.addRow('Chat do Discord', self.chat)
         self.editor = QLineEdit(self.record.get('editor_hint') or '')
-        self.editor.setPlaceholderText('Ex.: Mensagem #geral; vazio se houver um único campo')
+        self.editor.setPlaceholderText('Automático no Discord; use Detectar campos para fixar o chat')
         editor_row = QHBoxLayout()
         editor_row.addWidget(self.editor, 1)
         editor_row.addWidget(button('Detectar campos', self.detect_fields))
@@ -147,7 +147,7 @@ class ProfileDialog(QDialog):
         explanation = QLabel('Janela + Enter restaura o destino e cola a mensagem de uma vez. '
                              'Não precisa marcar o botão de envio. O envio usa o foco do teclado; '
                              'tarefas simultâneas são executadas em sequência. '
-                             'O link do Discord é experimental: confirme o nome do campo do chat.')
+                             'No Discord, o campo é detectado automaticamente. Com link, abra o chat desejado antes de salvar o perfil.')
         explanation.setObjectName('muted')
         explanation.setWordWrap(True)
         layout.addWidget(explanation)
@@ -193,8 +193,18 @@ class ProfileDialog(QDialog):
         try:
             from pywinauto import Desktop
             root = Desktop(backend='uia').window(handle=w['hwnd']).wrapper_object()
-            fields = [e.window_text() for e in root.descendants(control_type='Edit')
-                      if e.is_enabled() and e.is_keyboard_focusable()]
+            from app.automation.window_sender import discover_editors, choose_editor
+            if root.is_minimized():
+                root.restore()
+            candidates = discover_editors(root, w['discord'])
+            try:
+                chosen = choose_editor(candidates, discord=w['discord'])
+            except RuntimeError:
+                chosen = None
+            if chosen is not None:
+                self.editor.setText(chosen.window_text())
+                return
+            fields = [e.window_text() for e in candidates]
             fields = list(dict.fromkeys(n for n in fields if n))
             if not fields:
                 raise RuntimeError('Nenhum campo identificado. Abra o chat na janela de destino e tente novamente.')
@@ -219,6 +229,10 @@ class ProfileDialog(QDialog):
                            window_title=(w or {}).get('title', self.record.get('window_title', '')),
                            chat_url=self.chat.text() if self.chat.isEnabled() else '',
                            editor_hint=self.editor.text())
+            if (self.provider.currentData() == 'window' and options['chat_url'].strip()
+                    and not options['editor_hint'].strip()):
+                self.detect_fields()
+                options['editor_hint'] = self.editor.text()
             if self.provider.currentData() == 'window':
                 from app.automation.window_sender import validate
                 validate(dict(options, allow_foreground=self.allow.isChecked()), 'click', '')
@@ -335,7 +349,7 @@ class MainWindow(QMainWindow):
         self.status = QLabel('●  Pronto')
         self.status.setObjectName('ready')
         self.statusBar().addWidget(self.status, 1)
-        self.statusBar().addPermanentWidget(QLabel('Astra Sender 0.2.4'))
+        self.statusBar().addPermanentWidget(QLabel(f'Astra Sender {VERSION}'))
         self.tray = QSystemTrayIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon), self)
         tray_menu = QMenu(self)
         tray_menu.addAction('Abrir Astra Sender', self.show_normal)

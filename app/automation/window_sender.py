@@ -3,6 +3,7 @@ import os
 import re
 import sys
 import time
+import unicodedata
 from urllib.parse import urlsplit
 
 
@@ -55,14 +56,69 @@ def resolve_window(profile, windows):
     raise RuntimeError('A janela selecionada não está aberta ou ficou ambígua. Selecione-a novamente em Perfis.')
 
 
-def choose_editor(editors, expected=''):
+def normalized_name(value):
+    value = unicodedata.normalize('NFKC', value).casefold()
+    return ' '.join(''.join(c for c in value if unicodedata.category(c) != 'Cf').split())
+
+
+def composer_target(name):
+    name = normalized_name(name)
+    match = re.match(r'^(?:conversar em|enviar mensagem (?:em|para)|mensagem|message)\s+(.+)$', name)
+    return match[1] if match else None
+
+
+def discover_editors(root, discord=False):
+    controls = list(root.descendants(control_type='Edit'))
+    if discord:
+        # Chromium can expose contenteditable through other UIA control types.
+        for kind in ('Document', 'Group', 'Custom'):
+            controls.extend(e for e in root.descendants(control_type=kind)
+                            if composer_target(e.window_text()))
+    result, seen = [], set()
+    for e in controls:
+        try:
+            if not (e.is_visible() and e.is_enabled() and e.is_keyboard_focusable()):
+                continue
+            runtime_id = tuple(e.element_info.runtime_id or ())
+            key = runtime_id or ('object', id(e))
+            if key not in seen:
+                seen.add(key)
+                result.append(e)
+        except Exception:
+            continue  # An element may disappear while Discord refreshes the tree.
+    return result
+
+
+def choose_editor(editors, expected='', discord=False):
     usable = [e for e in editors if e.is_visible() and e.is_enabled() and e.is_keyboard_focusable()]
     if expected:
-        usable = [e for e in usable if expected.casefold() in e.window_text().casefold()]
+        wanted = normalized_name(expected)
+        target = composer_target(expected) if discord else None
+        usable = [e for e in usable if normalized_name(e.window_text()) == wanted or
+                  (target is not None and composer_target(e.window_text()) == target)]
+    elif discord:
+        usable = [e for e in usable if composer_target(e.window_text())]
     if len(usable) != 1:
-        raise RuntimeError('Não foi possível identificar um único campo de mensagem. '
-                           'Informe em Perfis o nome acessível do campo (ex.: Mensagem #geral).')
+        if not usable:
+            raise RuntimeError('Campo de mensagem não encontrado pela acessibilidade. '
+                               'Abra o chat, feche pesquisas/diálogos e use Detectar campos em Perfis. '
+                               'Se persistir, o cliente pode não expor o campo ao Windows.')
+        raise RuntimeError('Mais de um campo de mensagem encontrado. Feche conversas laterais '
+                           'ou selecione o campo em Detectar campos. Nada foi enviado.')
     return usable[0]
+
+
+def read_editor_text(editor):
+    # Read contents, never the accessible label (which may be a placeholder).
+    for read in (lambda: editor.iface_value.CurrentValue,
+                 lambda: editor.iface_text.DocumentRange.GetText(-1)):
+        try:
+            value = read()
+            if isinstance(value, str):
+                return value
+        except Exception:
+            pass
+    raise RuntimeError('O aplicativo não permite verificar o texto desse campo. Envio cancelado.')
 
 
 def validate(profile, mode, message):
@@ -114,7 +170,8 @@ def _send(profile, message, mode):
     deadline = time.monotonic() + 8
     while True:
         try:
-            editor = choose_editor(root.descendants(control_type='Edit'), profile.get('editor_hint') or '')
+            editor = choose_editor(discover_editors(root, window['discord']),
+                                   profile.get('editor_hint') or '', window['discord'])
             break
         except RuntimeError:
             if time.monotonic() >= deadline:
@@ -129,10 +186,10 @@ def _send(profile, message, mode):
     if mode == 'write':
         # Refuse to append to an existing draft. Unsupported value patterns fail closed.
         try:
-            existing = editor.get_value()
+            existing = read_editor_text(editor)
         except Exception as exc:
             raise RuntimeError('O aplicativo não permite verificar o rascunho desse campo. Envio cancelado.') from exc
-        if existing:
+        if existing.replace('\r', '').replace('\n', ''):
             raise RuntimeError('O chat já contém um rascunho. Limpe o campo antes do envio automático.')
         previous = pyperclip.paste()
         try:
@@ -141,7 +198,7 @@ def _send(profile, message, mode):
             pg.hotkey('ctrl', 'v')
             time.sleep(.3)
             check_focus()
-            if editor.get_value().replace('\r\n', '\n') != message.replace('\r\n', '\n'):
+            if read_editor_text(editor).replace('\r\n', '\n') != message.replace('\r\n', '\n'):
                 raise RuntimeError('O texto colado não pôde ser confirmado. Enter não foi enviado.')
         finally:
             if pyperclip.paste() == message:
